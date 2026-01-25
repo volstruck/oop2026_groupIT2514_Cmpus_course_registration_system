@@ -1,0 +1,35 @@
+package campus.service;
+
+import campus.models.Student;
+import campus.repository.StudentRepository;
+
+import java.util.List;
+
+public class StudentService {
+
+    private final StudentRepository repo;
+
+    public StudentService(StudentRepository repo) {
+        this.repo = repo;
+    }
+
+    public void createStudent(Student s) {
+        repo.create(s);
+    }
+
+    public void deleteStudent(int id) {
+        repo.delete(id);
+    }
+
+    public Student getStudentById(int id) {
+        return repo.findById(id);
+    }
+
+    public Student getStudentByEmail(String email) {
+        return repo.findByEmail(email);
+    }
+
+    public List<Student> getAllStudents() {
+        return repo.findAll();
+    }
+}
