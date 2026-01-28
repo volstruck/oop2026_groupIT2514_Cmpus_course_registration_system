@@ -18,24 +18,20 @@ public class Main {
 
     private static final Scanner sc = new Scanner(System.in);
 
-    public static void main(String[] args) {
+    private static final CourseService courseService =
+            new CourseService(new JdbcCourseRepository());
+    private static final StudentService studentService =
+            new StudentService(new JdbcStudentRepository());
+    private static final EnrollmentService enrollmentService =
+            new EnrollmentService(new JdbcEnrollmentRepository());
 
-        CourseService courseService =
-                new CourseService(new JdbcCourseRepository());
-        StudentService studentService =
-                new StudentService(new JdbcStudentRepository());
-        EnrollmentService enrollmentService =
-                new EnrollmentService(new JdbcEnrollmentRepository());
+    public static void main(String[] args) {
 
         while (true) {
             System.out.println("\n=== CAMPUS SYSTEM ===");
-            System.out.println("1. Create course");
-            System.out.println("2. List courses");
-            System.out.println("3. Create student");
-            System.out.println("4. List students");
-            System.out.println("5. Enroll student to course");
-            System.out.println("6. View student enrollments");
-            System.out.println("7. View course enrollments");
+            System.out.println("1. Student login");
+            System.out.println("2. Student registration");
+            System.out.println("3. Admin");
             System.out.println("0. Exit");
             System.out.print("Choose: ");
 
@@ -43,30 +39,151 @@ public class Main {
 
             try {
                 switch (choice) {
-                    case 1 -> createCourse(courseService);
-                    case 2 -> listCourses(courseService);
-                    case 3 -> createStudent(studentService);
-                    case 4 -> listStudents(studentService);
-                    case 5 -> enrollStudent(enrollmentService);
-                    case 6 -> listEnrollmentsByStudent(enrollmentService);
-                    case 7 -> listEnrollmentsByCourse(enrollmentService);
-                    case 0 -> {
-                        System.out.println("Bye.");
-                        return;
-                    }
+                    case 1 -> studentMenu();        // login inside
+                    case 2 -> registerStudent();    // create student
+                    case 3 -> adminMenu();
+                    case 0 -> { return; }
                     default -> System.out.println("Invalid option.");
                 }
             } catch (IllegalStateException e) {
                 System.out.println("Error: " + e.getMessage());
-            } catch (RuntimeException e) {
-                System.out.println("System error. Try again.");
             }
         }
     }
 
-    // ---------- COURSE UI ----------
+    // ================= STUDENT =================
 
-    private static void createCourse(CourseService service) {
+    private static void studentMenu() {
+
+        System.out.print("Email: ");
+        String email = sc.nextLine();
+
+        System.out.print("Password: ");
+        String password = sc.nextLine();
+
+        Student student = studentService.login(email, password);
+        int studentId = student.getId();
+
+        while (true) {
+            System.out.println("\n--- STUDENT MENU ---");
+            System.out.println("1. View courses");
+            System.out.println("2. Enroll in course");
+            System.out.println("3. Drop course");
+            System.out.println("4. My enrollments");
+            System.out.println("0. Back");
+            System.out.print("Choose: ");
+
+            int choice = Integer.parseInt(sc.nextLine());
+
+            switch (choice) {
+                case 1 -> listCourses();
+                case 2 -> enroll(studentId);
+                case 3 -> drop(studentId);
+                case 4 -> listMyEnrollments(studentId);
+                case 0 -> { return; }
+                default -> System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private static void registerStudent() {
+        System.out.print("Name: ");
+        String name = sc.nextLine();
+
+        System.out.print("Surname: ");
+        String surname = sc.nextLine();
+
+        System.out.print("Email: ");
+        String email = sc.nextLine();
+
+        System.out.print("Password: ");
+        String password = sc.nextLine();
+
+        System.out.print("Course year: ");
+        int year = Integer.parseInt(sc.nextLine());
+
+        System.out.print("Faculty: ");
+        String faculty = sc.nextLine();
+
+        Student s = new Student(
+                0, name, surname, email, password, year, faculty
+        );
+
+        studentService.createStudent(s);
+        System.out.println("Registration successful. You can now log in.");
+    }
+
+    private static void enroll(int studentId) {
+        System.out.print("Course ID: ");
+        int courseId = Integer.parseInt(sc.nextLine());
+        enrollmentService.enroll(studentId, courseId);
+        System.out.println("Enrolled.");
+    }
+
+    private static void drop(int studentId) {
+        System.out.print("Course ID: ");
+        int courseId = Integer.parseInt(sc.nextLine());
+        enrollmentService.drop(studentId, courseId);
+        System.out.println("Dropped.");
+    }
+
+    private static void listMyEnrollments(int studentId) {
+        List<Enrollment> list =
+                enrollmentService.getEnrollmentsByStudent(studentId);
+
+        if (list.isEmpty()) {
+            System.out.println("No enrollments.");
+            return;
+        }
+
+        for (Enrollment e : list) {
+            System.out.println("Course ID: " + e.getCourseId());
+        }
+    }
+
+    // ================= ADMIN =================
+
+    private static boolean adminLogin() {
+        System.out.print("Admin username: ");
+        String username = sc.nextLine();
+
+        System.out.print("Admin password: ");
+        String password = sc.nextLine();
+
+        return username.equals("admin") && password.equals("admin123");
+    }
+
+    private static void adminMenu() {
+        if (!adminLogin()) {
+            System.out.println("Access denied.");
+            return;
+        }
+
+        while (true) {
+            System.out.println("\n--- ADMIN MENU ---");
+            System.out.println("1. Create course");
+            System.out.println("2. Delete course");
+            System.out.println("3. List courses");
+            System.out.println("4. View course enrollments");
+            System.out.println("5. List students");
+            System.out.println("0. Back");
+            System.out.print("Choose: ");
+
+            int choice = Integer.parseInt(sc.nextLine());
+
+            switch (choice) {
+                case 1 -> createCourse();
+                case 2 -> deleteCourse();
+                case 3 -> listCourses();
+                case 4 -> listCourseEnrollments();
+                case 5 -> listStudents();
+                case 0 -> { return; }
+                default -> System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private static void createCourse() {
         System.out.print("Course name: ");
         String name = sc.nextLine();
 
@@ -94,127 +211,49 @@ public class Main {
         System.out.print("End time (HH:mm): ");
         LocalTime end = LocalTime.parse(sc.nextLine());
 
-        Course c = new Course(
+        courseService.createCourse(new Course(
                 0, name, instructor, credits, weeks,
                 cap, faculties, start, end, day
-        );
+        ));
 
-        service.createCourse(c);
         System.out.println("Course created.");
     }
 
-    private static void listCourses(CourseService service) {
-        List<Course> courses = service.getAllCourses();
-        if (courses.isEmpty()) {
-            System.out.println("No courses.");
-            return;
-        }
-        for (Course c : courses) {
-            System.out.printf(
-                    "%d | %s | %s | day %d %s-%s%n",
-                    c.getId(),
-                    c.getName(),
-                    c.getInstructorName(),
-                    c.getScheduleDay(),
-                    c.getScheduleStart(),
-                    c.getScheduleEnd()
-            );
-        }
+    private static void deleteCourse() {
+        System.out.print("Course ID: ");
+        int id = Integer.parseInt(sc.nextLine());
+        courseService.deleteCourse(id);
+        System.out.println("Course deleted.");
     }
 
-    // ---------- STUDENT UI ----------
-
-    private static void createStudent(StudentService service) {
-        System.out.print("Name: ");
-        String name = sc.nextLine();
-
-        System.out.print("Surname: ");
-        String surname = sc.nextLine();
-
-        System.out.print("Email: ");
-        String email = sc.nextLine();
-
-        System.out.print("Password: ");
-        String password = sc.nextLine();
-
-        System.out.print("Course year: ");
-        int year = Integer.parseInt(sc.nextLine());
-
-        System.out.print("Faculty: ");
-        String faculty = sc.nextLine();
-
-        Student s = new Student(
-                0, name, surname, email, password, year, faculty
-        );
-
-        service.createStudent(s);
-        System.out.println("Student created.");
-    }
-
-    private static void listStudents(StudentService service) {
-        List<Student> students = service.getAllStudents();
-        if (students.isEmpty()) {
-            System.out.println("No students.");
-            return;
-        }
-        for (Student s : students) {
-            System.out.printf(
-                    "%d | %s %s | %s | %s%n",
-                    s.getId(),
-                    s.getName(),
-                    s.getSurname(),
-                    s.getEmail(),
-                    s.getFaculty()
-            );
-        }
-    }
-
-    // ---------- ENROLLMENT UI ----------
-
-    private static void enrollStudent(EnrollmentService service) {
-        System.out.print("Student ID: ");
-        int studentId = Integer.parseInt(sc.nextLine());
-
+    private static void listCourseEnrollments() {
         System.out.print("Course ID: ");
         int courseId = Integer.parseInt(sc.nextLine());
 
-        service.enroll(studentId, courseId);
-        System.out.println("Enrollment successful.");
-    }
+        List<Enrollment> list =
+                enrollmentService.getEnrollmentsByCourse(courseId);
 
-    private static void listEnrollmentsByStudent(EnrollmentService service) {
-        System.out.print("Student ID: ");
-        int studentId = Integer.parseInt(sc.nextLine());
-
-        List<Enrollment> list = service.getEnrollmentsByStudent(studentId);
         if (list.isEmpty()) {
             System.out.println("No enrollments.");
             return;
         }
+
         for (Enrollment e : list) {
-            System.out.printf(
-                    "Enrollment %d | Course ID: %d%n",
-                    e.getId(),
-                    e.getCourseId()
-            );
+            System.out.println("Student ID: " + e.getStudentId());
         }
     }
 
-    private static void listEnrollmentsByCourse(EnrollmentService service) {
-        System.out.print("Course ID: ");
-        int courseId = Integer.parseInt(sc.nextLine());
-
-        List<Enrollment> list = service.getEnrollmentsByCourse(courseId);
-        if (list.isEmpty()) {
-            System.out.println("No enrollments.");
-            return;
+    private static void listCourses() {
+        for (Course c : courseService.getAllCourses()) {
+            System.out.printf("%d | %s | %s%n",
+                    c.getId(), c.getName(), c.getInstructorName());
         }
-        for (Enrollment e : list) {
-            System.out.printf(
-                    "Enrollment %d | Student ID: %d%n",
-                    e.getId(),
-                    e.getStudentId()
-            );
+    }
+
+    private static void listStudents() {
+        for (Student s : studentService.getAllStudents()) {
+            System.out.printf("%d | %s %s%n",
+                    s.getId(), s.getName(), s.getSurname());
         }
     }
 }

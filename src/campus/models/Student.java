@@ -4,19 +4,19 @@ public class Student {
     private int id;
     private String name;
     private String surname;
-    private String password;
     private String email;
+    private String password;
     private int courseYear;
     private String faculty;
 
     public Student(int id, String name, String surname,
-                   String password, String email,
+                   String email, String password,
                    int courseYear, String faculty) {
         setId(id);
         setName(name);
         setSurname(surname);
-        setPassword(password);
         setEmail(email);
+        setPassword(password);
         setCourseYear(courseYear);
         setFaculty(faculty);
     }

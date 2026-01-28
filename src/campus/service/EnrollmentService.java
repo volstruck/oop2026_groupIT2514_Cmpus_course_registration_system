@@ -28,6 +28,16 @@ public class EnrollmentService {
         return repo.findAll();
     }
 
+    public void drop(int studentId, int courseId) {
+        Enrollment e = repo.findByStudentId(studentId).stream()
+                .filter(x -> x.getCourseId() == courseId)
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalStateException("Enrollment not found"));
+
+        repo.delete(e.getId());
+    }
+
 
     public List<Enrollment> getEnrollmentsByStudent(int studentId) {
         return repo.findByStudentId(studentId);

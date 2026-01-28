@@ -13,6 +13,18 @@ public class StudentService {
         this.repo = repo;
     }
 
+    public Student login(String email, String password) {
+        Student s = repo.findByEmail(email);
+        if (s == null) {
+            throw new IllegalStateException("Student not found");
+        }
+        if (!s.getPassword().equals(password)) {
+            throw new IllegalStateException("Wrong password");
+        }
+        return s;
+    }
+
+
     public void createStudent(Student s) {
         repo.create(s);
     }

@@ -31,7 +31,7 @@ public class JdbcEnrollmentRepository implements EnrollmentRepository {
         );
     }
 
-
+    // FIND by enrollment id
     @Override
     public Enrollment findById(int id) {
         return DbUtils.execQuery(
