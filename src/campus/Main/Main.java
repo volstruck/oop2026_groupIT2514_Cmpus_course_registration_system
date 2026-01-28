@@ -1,12 +1,13 @@
 package campus.Main;
 
 import campus.models.Course;
+import campus.models.Enrollment;
 import campus.models.Student;
-import campus.repository.CourseRepository;
-import campus.repository.StudentRepository;
 import campus.repository.jdbc.JdbcCourseRepository;
+import campus.repository.jdbc.JdbcEnrollmentRepository;
 import campus.repository.jdbc.JdbcStudentRepository;
 import campus.service.CourseService;
+import campus.service.EnrollmentService;
 import campus.service.StudentService;
 
 import java.time.LocalTime;
@@ -23,6 +24,8 @@ public class Main {
                 new CourseService(new JdbcCourseRepository());
         StudentService studentService =
                 new StudentService(new JdbcStudentRepository());
+        EnrollmentService enrollmentService =
+                new EnrollmentService(new JdbcEnrollmentRepository());
 
         while (true) {
             System.out.println("\n=== CAMPUS SYSTEM ===");
@@ -30,21 +33,33 @@ public class Main {
             System.out.println("2. List courses");
             System.out.println("3. Create student");
             System.out.println("4. List students");
+            System.out.println("5. Enroll student to course");
+            System.out.println("6. View student enrollments");
+            System.out.println("7. View course enrollments");
             System.out.println("0. Exit");
             System.out.print("Choose: ");
 
             int choice = Integer.parseInt(sc.nextLine());
 
-            switch (choice) {
-                case 1 -> createCourse(courseService);
-                case 2 -> listCourses(courseService);
-                case 3 -> createStudent(studentService);
-                case 4 -> listStudents(studentService);
-                case 0 -> {
-                    System.out.println("Bye.");
-                    return;
+            try {
+                switch (choice) {
+                    case 1 -> createCourse(courseService);
+                    case 2 -> listCourses(courseService);
+                    case 3 -> createStudent(studentService);
+                    case 4 -> listStudents(studentService);
+                    case 5 -> enrollStudent(enrollmentService);
+                    case 6 -> listEnrollmentsByStudent(enrollmentService);
+                    case 7 -> listEnrollmentsByCourse(enrollmentService);
+                    case 0 -> {
+                        System.out.println("Bye.");
+                        return;
+                    }
+                    default -> System.out.println("Invalid option.");
                 }
-                default -> System.out.println("Invalid option.");
+            } catch (IllegalStateException e) {
+                System.out.println("Error: " + e.getMessage());
+            } catch (RuntimeException e) {
+                System.out.println("System error. Try again.");
             }
         }
     }
@@ -96,7 +111,7 @@ public class Main {
         }
         for (Course c : courses) {
             System.out.printf(
-                    "%d | %s | %s | %s %s-%s%n",
+                    "%d | %s | %s | day %d %s-%s%n",
                     c.getId(),
                     c.getName(),
                     c.getInstructorName(),
@@ -150,6 +165,55 @@ public class Main {
                     s.getSurname(),
                     s.getEmail(),
                     s.getFaculty()
+            );
+        }
+    }
+
+    // ---------- ENROLLMENT UI ----------
+
+    private static void enrollStudent(EnrollmentService service) {
+        System.out.print("Student ID: ");
+        int studentId = Integer.parseInt(sc.nextLine());
+
+        System.out.print("Course ID: ");
+        int courseId = Integer.parseInt(sc.nextLine());
+
+        service.enroll(studentId, courseId);
+        System.out.println("Enrollment successful.");
+    }
+
+    private static void listEnrollmentsByStudent(EnrollmentService service) {
+        System.out.print("Student ID: ");
+        int studentId = Integer.parseInt(sc.nextLine());
+
+        List<Enrollment> list = service.getEnrollmentsByStudent(studentId);
+        if (list.isEmpty()) {
+            System.out.println("No enrollments.");
+            return;
+        }
+        for (Enrollment e : list) {
+            System.out.printf(
+                    "Enrollment %d | Course ID: %d%n",
+                    e.getId(),
+                    e.getCourseId()
+            );
+        }
+    }
+
+    private static void listEnrollmentsByCourse(EnrollmentService service) {
+        System.out.print("Course ID: ");
+        int courseId = Integer.parseInt(sc.nextLine());
+
+        List<Enrollment> list = service.getEnrollmentsByCourse(courseId);
+        if (list.isEmpty()) {
+            System.out.println("No enrollments.");
+            return;
+        }
+        for (Enrollment e : list) {
+            System.out.printf(
+                    "Enrollment %d | Student ID: %d%n",
+                    e.getId(),
+                    e.getStudentId()
             );
         }
     }
