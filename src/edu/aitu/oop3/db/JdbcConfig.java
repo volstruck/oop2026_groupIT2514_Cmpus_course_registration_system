@@ -1,44 +1,38 @@
 package edu.aitu.oop3.db;
 
-public class JdbcConfig {
-    private String user;
-    private String password;
+public final class JdbcConfig {
 
-    public JdbcConfig(
-//            String host, String dbname,
-            String user, String password){
-//        setHost(host);
-//        setDbname(dbname);
-        setUser(user);
-        setPassword(password);
+    private static final JdbcConfig INSTANCE = new JdbcConfig();
+
+    private final String url;
+    private final String user;
+    private final String password;
+
+    private JdbcConfig() {
+        this.url = System.getenv("DB_URL");
+        this.user = System.getenv("DB_USER");
+        this.password = System.getenv("DB_PASS");
+
+        if (url == null || user == null || password == null) {
+            throw new IllegalStateException(
+                    "DB_URL, DB_USER, DB_PASS must be set as environment variables"
+            );
+        }
     }
 
-//    public void setDbname(String dbname) {
-//        this.dbname = dbname;
-//    }
-//
-//    public void setHost(String host) {
-//        this.host = host;
-//    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public static JdbcConfig getInstance() {
+        return INSTANCE;
     }
 
-    public void setUser(String user) {
-        this.user = user;
+    public String getUrl() {
+        return url;
     }
 
-    public String getUser(){
-        return this.user;
+    public String getUser() {
+        return user;
     }
 
-    public String getPassword(){
-        return this.password;
-    }
-
-    @Override
-    public String toString(){
-        return "jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres";
+    public String getPassword() {
+        return password;
     }
 }

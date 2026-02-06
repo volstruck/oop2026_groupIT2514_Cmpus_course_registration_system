@@ -1,6 +1,6 @@
 CREATE TABLE enrollments (
-                             student_id  INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-                             course_id   INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-                             enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                             PRIMARY KEY (student_id, course_id)
+                             id SERIAL PRIMARY KEY,
+                             student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                             course_id INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                             UNIQUE (student_id, course_id)
 );

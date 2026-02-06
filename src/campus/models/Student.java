@@ -1,6 +1,6 @@
 package campus.models;
 
-public class Student {
+public class Student implements User {
     private int id;
     private String name;
     private String surname;
@@ -19,6 +19,11 @@ public class Student {
         setPassword(password);
         setCourseYear(courseYear);
         setFaculty(faculty);
+    }
+
+    @Override
+    public String getRole() {
+        return "STUDENT";
     }
 
     public int getId(){ return id;}

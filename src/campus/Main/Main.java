@@ -1,14 +1,10 @@
 package campus.Main;
 
-import campus.models.Course;
-import campus.models.Enrollment;
-import campus.models.Student;
-import campus.repository.jdbc.JdbcCourseRepository;
-import campus.repository.jdbc.JdbcEnrollmentRepository;
-import campus.repository.jdbc.JdbcStudentRepository;
-import campus.service.CourseService;
-import campus.service.EnrollmentService;
-import campus.service.StudentService;
+import campus.exceptions.*;
+import campus.factory.UserFactory;
+import campus.models.*;
+import campus.repository.jdbc.*;
+import campus.service.*;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -19,11 +15,19 @@ public class Main {
     private static final Scanner sc = new Scanner(System.in);
 
     private static final CourseService courseService =
-            new CourseService(new JdbcCourseRepository());
+            new CourseService(
+                    new JdbcCourseRepository(),
+                    new JdbcEnrollmentRepository()
+            );
+
     private static final StudentService studentService =
             new StudentService(new JdbcStudentRepository());
+
     private static final EnrollmentService enrollmentService =
-            new EnrollmentService(new JdbcEnrollmentRepository());
+            new EnrollmentService(
+                    new JdbcEnrollmentRepository(),
+                    new JdbcCourseRepository()
+            );
 
     public static void main(String[] args) {
 
@@ -37,16 +41,12 @@ public class Main {
 
             int choice = Integer.parseInt(sc.nextLine());
 
-            try {
-                switch (choice) {
-                    case 1 -> studentMenu();        // login inside
-                    case 2 -> registerStudent();    // create student
-                    case 3 -> adminMenu();
-                    case 0 -> { return; }
-                    default -> System.out.println("Invalid option.");
-                }
-            } catch (IllegalStateException e) {
-                System.out.println("Error: " + e.getMessage());
+            switch (choice) {
+                case 1 -> studentMenu();
+                case 2 -> registerStudent();
+                case 3 -> adminMenu();
+                case 0 -> { return; }
+                default -> System.out.println("Invalid option.");
             }
         }
     }
@@ -61,8 +61,16 @@ public class Main {
         System.out.print("Password: ");
         String password = sc.nextLine();
 
-        Student student = studentService.login(email, password);
+        Student student;
+        try {
+            student = studentService.login(email, password);
+        } catch (IllegalStateException e) {
+            System.out.println("Login failed: " + e.getMessage());
+            return; // go back to main menu
+        }
+
         int studentId = student.getId();
+        User user = UserFactory.createStudent(student);
 
         while (true) {
             System.out.println("\n--- STUDENT MENU ---");
@@ -105,26 +113,39 @@ public class Main {
         System.out.print("Faculty: ");
         String faculty = sc.nextLine();
 
-        Student s = new Student(
-                0, name, surname, email, password, year, faculty
+        studentService.createStudent(
+                new Student(0, name, surname, email, password, year, faculty)
         );
 
-        studentService.createStudent(s);
-        System.out.println("Registration successful. You can now log in.");
+        System.out.println("Registration successful.");
     }
 
     private static void enroll(int studentId) {
-        System.out.print("Course ID: ");
-        int courseId = Integer.parseInt(sc.nextLine());
-        enrollmentService.enroll(studentId, courseId);
-        System.out.println("Enrolled.");
+        try {
+            System.out.print("Course ID: ");
+            int courseId = Integer.parseInt(sc.nextLine());
+
+            enrollmentService.enroll(studentId, courseId);
+            System.out.println("Enrollment successful.");
+
+        } catch (CapacityExceededException |
+                 ScheduleConflictException |
+                 EntityNotFoundException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
     }
 
     private static void drop(int studentId) {
-        System.out.print("Course ID: ");
-        int courseId = Integer.parseInt(sc.nextLine());
-        enrollmentService.drop(studentId, courseId);
-        System.out.println("Dropped.");
+        try {
+            System.out.print("Course ID: ");
+            int courseId = Integer.parseInt(sc.nextLine());
+
+            enrollmentService.drop(studentId, courseId);
+            System.out.println("Dropped.");
+
+        } catch (EntityNotFoundException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
     }
 
     private static void listMyEnrollments(int studentId) {
@@ -136,22 +157,11 @@ public class Main {
             return;
         }
 
-        for (Enrollment e : list) {
-            System.out.println("Course ID: " + e.getCourseId());
-        }
+        list.forEach(e ->
+                System.out.println("Course ID: " + e.getCourseId()));
     }
 
     // ================= ADMIN =================
-
-    private static boolean adminLogin() {
-        System.out.print("Admin username: ");
-        String username = sc.nextLine();
-
-        System.out.print("Admin password: ");
-        String password = sc.nextLine();
-
-        return username.equals("admin") && password.equals("admin123");
-    }
 
     private static void adminMenu() {
         if (!adminLogin()) {
@@ -183,6 +193,20 @@ public class Main {
         }
     }
 
+    private static boolean adminLogin() {
+        System.out.print("Admin username: ");
+        String username = sc.nextLine();
+
+        System.out.print("Admin password: ");
+        String password = sc.nextLine();
+
+        if (username.equals("admin") && password.equals("admin123")) {
+            User admin = UserFactory.createAdmin(username);
+            return true;
+        }
+        return false;
+    }
+
     private static void createCourse() {
         System.out.print("Course name: ");
         String name = sc.nextLine();
@@ -211,19 +235,39 @@ public class Main {
         System.out.print("End time (HH:mm): ");
         LocalTime end = LocalTime.parse(sc.nextLine());
 
-        courseService.createCourse(new Course(
-                0, name, instructor, credits, weeks,
-                cap, faculties, start, end, day
-        ));
+        Course course = new CourseBuilder()
+                .name(name)
+                .instructor(instructor)
+                .credits(credits)
+                .weeks(weeks)
+                .maxCapacity(cap)
+                .faculties(faculties)
+                .schedule(start, end, day)
+                .build();
+
+        courseService.createCourse(course);
 
         System.out.println("Course created.");
     }
 
     private static void deleteCourse() {
-        System.out.print("Course ID: ");
-        int id = Integer.parseInt(sc.nextLine());
-        courseService.deleteCourse(id);
-        System.out.println("Course deleted.");
+        try {
+            System.out.print("Course ID: ");
+            int id = Integer.parseInt(sc.nextLine());
+
+            courseService.deleteCourse(id);
+            System.out.println("Course deleted.");
+
+        } catch (CourseHasEnrollmentsException |
+                 EntityNotFoundException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private static void listCourses() {
+        courseService.getAllCourses().forEach(c ->
+                System.out.printf("%d | %s | %s%n",
+                        c.getId(), c.getName(), c.getInstructorName()));
     }
 
     private static void listCourseEnrollments() {
@@ -238,22 +282,13 @@ public class Main {
             return;
         }
 
-        for (Enrollment e : list) {
-            System.out.println("Student ID: " + e.getStudentId());
-        }
-    }
-
-    private static void listCourses() {
-        for (Course c : courseService.getAllCourses()) {
-            System.out.printf("%d | %s | %s%n",
-                    c.getId(), c.getName(), c.getInstructorName());
-        }
+        list.forEach(e ->
+                System.out.println("Student ID: " + e.getStudentId()));
     }
 
     private static void listStudents() {
-        for (Student s : studentService.getAllStudents()) {
-            System.out.printf("%d | %s %s%n",
-                    s.getId(), s.getName(), s.getSurname());
-        }
+        studentService.getAllStudents().forEach(s ->
+                System.out.printf("%d | %s %s%n",
+                        s.getId(), s.getName(), s.getSurname()));
     }
 }
