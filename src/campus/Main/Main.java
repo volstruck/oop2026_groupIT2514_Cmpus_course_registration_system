@@ -66,7 +66,7 @@ public class Main {
 
     // ---------- COURSE UI ----------
 
-    private static void createCourse(CourseService service) {
+    private static void createCourse(CourseService service) {  //create course
         System.out.print("Course name: ");
         String name = sc.nextLine();
 
@@ -124,7 +124,7 @@ public class Main {
 
     // ---------- STUDENT UI ----------
 
-    private static void createStudent(StudentService service) {
+    private static void createStudent(StudentService service) { //create student
         System.out.print("Name: ");
         String name = sc.nextLine();
 
@@ -171,7 +171,7 @@ public class Main {
 
     // ---------- ENROLLMENT UI ----------
 
-    private static void enrollStudent(EnrollmentService service) {
+    private static void enrollStudent(EnrollmentService service) { //enroll student
         System.out.print("Student ID: ");
         int studentId = Integer.parseInt(sc.nextLine());
 
